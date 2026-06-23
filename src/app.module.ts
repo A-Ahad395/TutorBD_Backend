@@ -6,11 +6,7 @@ import { TutorModule } from './tutor/tutor.module';
 import { StudentModule } from './student/student.module';
 
 @Module({
-<<<<<<< Updated upstream
-  imports: [AdminModule, TutorModule],
-=======
-  imports: [TutorModule, StudentModule],
->>>>>>> Stashed changes
+  imports: [AdminModule, TutorModule, StudentModule],
   controllers: [AppController],
   providers: [AppService],
 })
