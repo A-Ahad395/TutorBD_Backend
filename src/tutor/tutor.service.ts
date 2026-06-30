@@ -4,8 +4,11 @@ import { UpdateTutorDto } from './dto/update-tutor.dto';
 
 @Injectable()
 export class TutorService {
-  create(createTutorDto: CreateTutorDto) {
-    return `New tutor created with name: ${createTutorDto.name}`;
+  create(createTutorDto: CreateTutorDto, file: Buffer) {
+    return {
+      tutor: createTutorDto,
+      file: file,
+    };
   }
 
   findAll(subject?: string) {
@@ -20,15 +23,21 @@ export class TutorService {
   }
 
   update(id: number, updateTutorDto: UpdateTutorDto) {
-    return `Found tutor with ID: ${id}`;
+    return {
+      id,
+      updatedData: updateTutorDto,
+    };
   }
 
   remove(id: number) {
-    return `Found tutor with ID: ${id}`;
+    return `Deleted tutor with ID: ${id}`;
   }
 
   replace(id: number, createTutorDto: CreateTutorDto) {
-    return `Found tutor with ID: ${id} and replaced with new data: ${createTutorDto.name}`;
+    return {
+      id,
+      tutor: createTutorDto,
+    };
   }
 
   addSchedule(id: number, timeSlot: string) {
