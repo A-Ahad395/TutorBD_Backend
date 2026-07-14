@@ -1,50 +1,41 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, IsNull } from 'typeorm';
+import { Tutor } from './entities/tutor.entity';
 import { CreateTutorDto } from './dto/create-tutor.dto';
-import { UpdateTutorDto } from './dto/update-tutor.dto';
 
 @Injectable()
 export class TutorService {
-  create(createTutorDto: CreateTutorDto, file: Buffer) {
-    return {
-      tutor: createTutorDto,
-      file: file,
-    };
+  constructor(
+    @InjectRepository(Tutor)
+    private readonly tutorRepository: Repository<Tutor>,
+  ) {}
+
+  async create(createTutorDto: CreateTutorDto) {
+    const newTutor = this.tutorRepository.create(createTutorDto);
+    return await this.tutorRepository.save(newTutor);
   }
 
-  findAll(subject?: string) {
-    if (subject) {
-      return `Found all tutors teaching ${subject}`;
+  async updatePhone(id: string, phone: string) {
+    const tutor = await this.tutorRepository.findOne({ where: { id } });
+    if (!tutor) {
+      throw new NotFoundException(`Tutor with ID ${id} not found.`);
     }
-    return `Found all tutors`;
+    tutor.phone = phone;
+    return await this.tutorRepository.save(tutor);
   }
 
-  findOne(id: number) {
-    return `Found tutor with ID: ${id}`;
+  async findNullFullNames() {
+    return await this.tutorRepository.find({
+      where: { fullName: IsNull() },
+    });
   }
 
-  update(id: number, updateTutorDto: UpdateTutorDto) {
-    return {
-      id,
-      updatedData: updateTutorDto,
-    };
-  }
-
-  remove(id: number) {
-    return `Deleted tutor with ID: ${id}`;
-  }
-
-  replace(id: number, createTutorDto: CreateTutorDto) {
-    return {
-      id,
-      tutor: createTutorDto,
-    };
-  }
-
-  addSchedule(id: number, timeSlot: string) {
-    return `Found tutor with ID: ${id} and added schedule for slot: ${timeSlot}`;
-  }
-
-  getSchedule(id: number, date: string) {
-    return `Found tutor with ID: ${id} and retrieved schedule for date: ${date}`;
+  async remove(id: string) {
+    const result = await this.tutorRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Tutor with ID ${id} not found.`);
+    }
+    return { message: `Tutor with ID ${id} successfully removed.` };
   }
 }
