@@ -1,176 +1,577 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Like, Repository } from 'typeorm';
+
 import { CreateSubjectDto } from './dto/create-subject.dto';
 import { UpdateSubjectDto } from './dto/update-subject.dto';
+import { UpdateSubjectNameDto } from './dto/update-subject-name.dto';
+import { UpdateSubjectStatusDto } from './dto/update-subject-status.dto';
+import { CreateCategoryDto } from './dto/create-category.dto';
+import { UpdateCategoryDto } from './dto/update-category.dto';
+import { UpdateCategoryNameDto } from './dto/update-category-name.dto';
+import { UpdateCategoryStatusDto } from './dto/update-category-status.dto';
 import { UpdateUserRoleDto } from './dto/update-user-role.dto';
+import { AdminProfileDto } from './dto/admin-profile.dto';
+import { CreateAdminDto } from './dto/create-admin.dto';
+import { UpdateAdminStatusDto } from './dto/update-admin-status.dto';
+import { Admin } from './admin.entity';
+import { Subject } from './subject.entity';
+import { Category } from './category.entity';
 
 @Injectable()
 export class AdminService {
-  private subjects = [
-    {
-      id: 1,
-      name: 'Web Technology',
-      description: 'Advanced web application development',
-    },
-    {
-      id: 2,
-      name: 'Database',
-      description: 'Database design and management',
-    },
-  ];
-
   private users = [
     {
       id: 1,
-      name: 'Rahim',
-      email: 'rahim@gmail.com',
+      name: 'Rahad',
+      email: 'rahada70@gmail.com',
       role: 'Student',
     },
     {
       id: 2,
-      name: 'Karim',
-      email: 'karim@gmail.com',
+      name: 'Kamrul',
+      email: 'kamrul@gmail.com',
       role: 'Tutor',
     },
     {
       id: 3,
-      name: 'Nadia',
-      email: 'nadia@gmail.com',
-      role: 'Manager',
+      name: 'Qaiyum',
+      email: 'qaiyum@gmail.com',
+      role: 'Moderator',
     },
   ];
 
-  // Route 1: View total platform analytics
-  getAnalytics() {
+  private adminProfileList: any[] = [];
+
+  constructor(
+    @InjectRepository(Admin)
+    private adminRepository: Repository<Admin>,
+
+    @InjectRepository(Subject)
+    private subjectRepository: Repository<Subject>,
+
+    @InjectRepository(Category)
+    private categoryRepository: Repository<Category>,
+  ) {}
+
+  async getAnalytics() {
+    const totalSubjects =
+      await this.subjectRepository.count();
+
+    const totalCategories =
+      await this.categoryRepository.count();
+
+    const totalAdmins =
+      await this.adminRepository.count();
+
     return {
       message: 'Platform analytics retrieved successfully',
       totalUsers: this.users.length,
-      totalSubjects: this.subjects.length,
+      totalSubjects: totalSubjects,
+      totalCategories: totalCategories,
+
       totalStudents: this.users.filter(
-        (user) => user.role.toLowerCase() === 'student',
+        (user) => user.role === 'Student',
       ).length,
+
       totalTutors: this.users.filter(
-        (user) => user.role.toLowerCase() === 'tutor',
+        (user) => user.role === 'Tutor',
       ).length,
-      totalManagers: this.users.filter(
-        (user) => user.role.toLowerCase() === 'manager',
+
+      totalModerators: this.users.filter(
+        (user) => user.role === 'Moderator',
       ).length,
+
+      totalAdmins: totalAdmins,
     };
   }
 
-  // Route 2: Get all subjects with optional search query
-  getSubjects(search?: string) {
-    if (search) {
-      const searchText = search.toLowerCase();
+  async getSubjects(): Promise<Subject[]> {
+    return this.subjectRepository.find();
+  }
 
-      return this.subjects.filter(
-        (subject) =>
-          subject.name.toLowerCase().includes(searchText) ||
-          subject.description.toLowerCase().includes(searchText),
+  async getSubjectById(
+    id: number,
+  ): Promise<Subject> {
+    const subject =
+      await this.subjectRepository.findOneBy({
+        id: id,
+      });
+
+    if (!subject) {
+      throw new NotFoundException(
+        `Subject with ID ${id} not found`,
       );
     }
 
-    return this.subjects;
+    return subject;
   }
 
-  // Route 3: Add a new global subject
-  createSubject(createSubjectDto: CreateSubjectDto) {
-    const newSubject = {
-      id:
-        this.subjects.length > 0
-          ? Math.max(...this.subjects.map((subject) => subject.id)) + 1
-          : 1,
-      ...createSubjectDto,
-    };
-
-    this.subjects.push(newSubject);
-
-    return {
-      message: 'Subject added successfully',
-      subject: newSubject,
-    };
+  async searchSubjectByName(
+    name: string,
+  ): Promise<Subject[]> {
+    return this.subjectRepository.find({
+      where: {
+        name: Like(`%${name}%`),
+      },
+    });
   }
 
-  // Route 4: Update a global subject
-  updateSubject(id: number, updateSubjectDto: UpdateSubjectDto) {
-    const subjectIndex = this.subjects.findIndex(
-      (subject) => subject.id === id,
-    );
+  async createSubject(
+    dto: CreateSubjectDto,
+  ): Promise<Subject> {
+    return this.subjectRepository.save(dto);
+  }
 
-    if (subjectIndex === -1) {
-      throw new NotFoundException(`Subject with ID ${id} not found`);
+  async updateSubject(
+    id: number,
+    dto: UpdateSubjectDto,
+  ): Promise<Subject> {
+    const subject =
+      await this.subjectRepository.findOneBy({
+        id: id,
+      });
+
+    if (!subject) {
+      throw new NotFoundException(
+        `Subject with ID ${id} not found`,
+      );
     }
 
-    this.subjects[subjectIndex] = {
+    await this.subjectRepository.update(
       id,
-      ...updateSubjectDto,
-    };
-
-    return {
-      message: 'Subject updated successfully',
-      subject: this.subjects[subjectIndex],
-    };
-  }
-
-  // Route 5: Delete a global subject
-  deleteSubject(id: number) {
-    const subjectIndex = this.subjects.findIndex(
-      (subject) => subject.id === id,
+      dto,
     );
 
-    if (subjectIndex === -1) {
-      throw new NotFoundException(`Subject with ID ${id} not found`);
-    }
+    const updatedSubject =
+      await this.subjectRepository.findOneBy({
+        id: id,
+      });
 
-    const deletedSubject = this.subjects.splice(subjectIndex, 1)[0];
-
-    return {
-      message: 'Subject deleted successfully',
-      subject: deletedSubject,
-    };
+    return updatedSubject!;
   }
 
-  // Route 6: Get all users with optional role filter
-  getUsers(role?: string) {
-    if (role) {
-      return this.users.filter(
-        (user) => user.role.toLowerCase() === role.toLowerCase(),
+  async updateSubjectName(
+    id: number,
+    dto: UpdateSubjectNameDto,
+  ): Promise<Subject> {
+    const subject =
+      await this.subjectRepository.findOneBy({
+        id: id,
+      });
+
+    if (!subject) {
+      throw new NotFoundException(
+        `Subject with ID ${id} not found`,
       );
     }
 
-    return this.users;
+    await this.subjectRepository.update(
+      id,
+      dto,
+    );
+
+    const updatedSubject =
+      await this.subjectRepository.findOneBy({
+        id: id,
+      });
+
+    return updatedSubject!;
   }
 
-  // Route 7: Promote or demote a user
-  updateUserRole(id: number, updateUserRoleDto: UpdateUserRoleDto) {
-    const user = this.users.find((currentUser) => currentUser.id === id);
+  async updateSubjectStatus(
+    id: number,
+    dto: UpdateSubjectStatusDto,
+  ): Promise<Subject> {
+    const subject =
+      await this.subjectRepository.findOneBy({
+        id: id,
+      });
+
+    if (!subject) {
+      throw new NotFoundException(
+        `Subject with ID ${id} not found`,
+      );
+    }
+
+    await this.subjectRepository.update(
+      id,
+      dto,
+    );
+
+    const updatedSubject =
+      await this.subjectRepository.findOneBy({
+        id: id,
+      });
+
+    return updatedSubject!;
+  }
+
+  async deleteSubject(
+    id: number,
+  ): Promise<void> {
+    const subject =
+      await this.subjectRepository.findOneBy({
+        id: id,
+      });
+
+    if (!subject) {
+      throw new NotFoundException(
+        `Subject with ID ${id} not found`,
+      );
+    }
+
+    await this.subjectRepository.delete(id);
+  }
+
+  async getCategories(): Promise<Category[]> {
+    return this.categoryRepository.find();
+  }
+
+  async getCategoryById(
+    id: number,
+  ): Promise<Category> {
+    const category =
+      await this.categoryRepository.findOneBy({
+        id: id,
+      });
+
+    if (!category) {
+      throw new NotFoundException(
+        `Category with ID ${id} not found`,
+      );
+    }
+
+    return category;
+  }
+
+  async searchCategoryByName(
+    name: string,
+  ): Promise<Category[]> {
+    return this.categoryRepository.find({
+      where: {
+        name: Like(`%${name}%`),
+      },
+    });
+  }
+
+  async createCategory(
+    dto: CreateCategoryDto,
+  ): Promise<Category> {
+    return this.categoryRepository.save(dto);
+  }
+
+  async updateCategory(
+    id: number,
+    dto: UpdateCategoryDto,
+  ): Promise<Category> {
+    const category =
+      await this.categoryRepository.findOneBy({
+        id: id,
+      });
+
+    if (!category) {
+      throw new NotFoundException(
+        `Category with ID ${id} not found`,
+      );
+    }
+
+    await this.categoryRepository.update(
+      id,
+      dto,
+    );
+
+    const updatedCategory =
+      await this.categoryRepository.findOneBy({
+        id: id,
+      });
+
+    return updatedCategory!;
+  }
+
+  async updateCategoryName(
+    id: number,
+    dto: UpdateCategoryNameDto,
+  ): Promise<Category> {
+    const category =
+      await this.categoryRepository.findOneBy({
+        id: id,
+      });
+
+    if (!category) {
+      throw new NotFoundException(
+        `Category with ID ${id} not found`,
+      );
+    }
+
+    await this.categoryRepository.update(
+      id,
+      dto,
+    );
+
+    const updatedCategory =
+      await this.categoryRepository.findOneBy({
+        id: id,
+      });
+
+    return updatedCategory!;
+  }
+
+  async updateCategoryStatus(
+    id: number,
+    dto: UpdateCategoryStatusDto,
+  ): Promise<Category> {
+    const category =
+      await this.categoryRepository.findOneBy({
+        id: id,
+      });
+
+    if (!category) {
+      throw new NotFoundException(
+        `Category with ID ${id} not found`,
+      );
+    }
+
+    await this.categoryRepository.update(
+      id,
+      dto,
+    );
+
+    const updatedCategory =
+      await this.categoryRepository.findOneBy({
+        id: id,
+      });
+
+    return updatedCategory!;
+  }
+
+  async deleteCategory(
+    id: number,
+  ): Promise<void> {
+    const category =
+      await this.categoryRepository.findOneBy({
+        id: id,
+      });
+
+    if (!category) {
+      throw new NotFoundException(
+        `Category with ID ${id} not found`,
+      );
+    }
+
+    await this.categoryRepository.delete(id);
+  }
+
+  getUsers(role?: string) {
+    if (!role) {
+      return this.users;
+    }
+
+    return this.users.filter(
+      (user) =>
+        user.role.toLowerCase() === role.toLowerCase(),
+    );
+  }
+
+  updateUserRole(
+    id: number,
+    dto: UpdateUserRoleDto,
+  ) {
+    const user = this.users.find(
+      (user) => user.id === id,
+    );
 
     if (!user) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+      throw new NotFoundException(
+        `User with ID ${id} not found`,
+      );
     }
 
     const previousRole = user.role;
-    user.role = updateUserRoleDto.role;
+
+    user.role = dto.role;
 
     return {
       message: 'User role updated successfully',
-      previousRole,
-      user,
+      previousRole: previousRole,
+      user: user,
     };
   }
 
-  // Route 8: Delete a user
   deleteUser(id: number) {
-    const userIndex = this.users.findIndex((user) => user.id === id);
+    const index = this.users.findIndex(
+      (user) => user.id === id,
+    );
 
-    if (userIndex === -1) {
-      throw new NotFoundException(`User with ID ${id} not found`);
+    if (index === -1) {
+      throw new NotFoundException(
+        `User with ID ${id} not found`,
+      );
     }
 
-    const deletedUser = this.users.splice(userIndex, 1)[0];
+    const deletedUser =
+      this.users.splice(index, 1)[0];
 
     return {
       message: 'User deleted successfully',
       user: deletedUser,
+    };
+  }
+
+  createAdminProfile(
+    dto: AdminProfileDto,
+  ) {
+    const newProfile = {
+      id: this.adminProfileList.length + 1,
+      name: dto.name,
+      date: dto.date,
+      socialLink: dto.socialLink,
+    };
+
+    this.adminProfileList.push(newProfile);
+
+    return {
+      message: 'Admin profile created successfully',
+      data: newProfile,
+    };
+  }
+
+  getAdminProfiles() {
+    return {
+      message: 'All admin profiles fetched successfully',
+      data: this.adminProfileList,
+    };
+  }
+
+  async createAdmin(
+    dto: CreateAdminDto,
+  ): Promise<Admin> {
+    const admin =
+      this.adminRepository.create(dto);
+
+    return this.adminRepository.save(admin);
+  }
+
+  async searchAdminByFullName(
+    fullName: string,
+  ): Promise<Admin[]> {
+    return this.adminRepository.find({
+      where: {
+        fullName: Like(`%${fullName}%`),
+      },
+    });
+  }
+
+  async getAdminByUsername(
+    username: string,
+  ) {
+    const admin =
+      await this.adminRepository.findOne({
+        select: {
+          id: true,
+          fullName: true,
+          isActive: true,
+        },
+        where: {
+          username: username,
+        },
+      });
+
+    if (!admin) {
+      throw new NotFoundException(
+        `Admin with username ${username} not found`,
+      );
+    }
+
+    return admin;
+  }
+
+  async updateAdminStatus(
+    username: string,
+    dto: UpdateAdminStatusDto,
+  ): Promise<Admin> {
+    const admin =
+      await this.adminRepository.findOneBy({
+        username: username,
+      });
+
+    if (!admin) {
+      throw new NotFoundException(
+        `Admin with username ${username} not found`,
+      );
+    }
+
+    await this.adminRepository.update(
+      {
+        username: username,
+      },
+      dto,
+    );
+
+    const updatedAdmin =
+      await this.adminRepository.findOneBy({
+        username: username,
+      });
+
+    return updatedAdmin!;
+  }
+
+  async deleteAdminByUsername(
+    username: string,
+  ): Promise<void> {
+    const admin =
+      await this.adminRepository.findOneBy({
+        username: username,
+      });
+
+    if (!admin) {
+      throw new NotFoundException(
+        `Admin with username ${username} not found`,
+      );
+    }
+
+    await this.adminRepository.delete({
+      username: username,
+    });
+  }
+
+  async getAllAdmins(): Promise<Admin[]> {
+    return this.adminRepository.find();
+  }
+
+  async getDashboard() {
+    const totalSubjects =
+      await this.subjectRepository.count();
+
+    const totalCategories =
+      await this.categoryRepository.count();
+
+    const totalAdmins =
+      await this.adminRepository.count();
+
+    return {
+      message:
+        'Admin dashboard data retrieved successfully',
+
+      totalUsers: this.users.length,
+
+      totalStudents: this.users.filter(
+        (user) => user.role === 'Student',
+      ).length,
+
+      totalTutors: this.users.filter(
+        (user) => user.role === 'Tutor',
+      ).length,
+
+      totalModerators: this.users.filter(
+        (user) => user.role === 'Moderator',
+      ).length,
+
+      totalAdmins: totalAdmins,
+      totalSubjects: totalSubjects,
+      totalCategories: totalCategories,
+      totalTuitions: 0,
+      totalRevenue: 0,
     };
   }
 }
