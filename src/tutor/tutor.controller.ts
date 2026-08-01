@@ -8,7 +8,12 @@ import {
   Param,
   Delete,
   Query,
+  UseInterceptors,
+  ParseFilePipe,
+  UploadedFile,
+  MaxFileSizeValidator,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { TutorService } from './tutor.service';
 import { CreateTutorDto } from './dto/create-tutor.dto';
 import { UpdateTutorDto } from './dto/update-tutor.dto';
@@ -18,8 +23,22 @@ export class TutorController {
   constructor(private readonly tutorService: TutorService) {}
 
   @Post()
-  create(@Body() createTutorDto: CreateTutorDto) {
-    return this.tutorService.create(createTutorDto);
+  @UseInterceptors(FileInterceptor('nidImage'))
+  create(
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({
+            maxSize: 2 * 1024 * 1024,
+          }),
+        ],
+      }),
+    )
+    file: Buffer,
+
+    @Body() createTutorDto: CreateTutorDto,
+  ) {
+    return this.tutorService.create(createTutorDto, file);
   }
 
   @Get()
