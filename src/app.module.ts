@@ -4,18 +4,19 @@ import { ConfigModule } from '@nestjs/config';
 
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+
 import { AdminModule } from './admin/admin.module';
 import { StudentModule } from './student/student.module';
-import { ModeratorModule } from './moderator/moderator.module';
-
-
-@Module({
-  imports: [AdminModule, TutorModule, StudentModule, ModeratorModule],
 import { TutorModule } from './tutor/tutor.module';
+import { ModeratorModule } from './moderator/moderator.module';
 import { PaymentModule } from './payment/payment.module';
+import { TuitionModule } from './tuition/tuition.module';
+import { BookingModule } from './booking/booking.module';
+import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
+
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -34,10 +35,20 @@ import { PaymentModule } from './payment/payment.module';
     AdminModule,
     StudentModule,
     TutorModule,
+    ModeratorModule,
     PaymentModule,
+    TuitionModule,
+    BookingModule,
+    ReviewModule,
+
   ],
-feature/admin
-  controllers: [AppController],
-  providers: [AppService],
+
+  controllers: [
+    AppController,
+  ],
+
+  providers: [
+    AppService,
+  ],
 })
 export class AppModule {}

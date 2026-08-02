@@ -1,40 +1,55 @@
 import {
-  IsInt,
   IsNotEmpty,
+  IsNumber,
   IsString,
-  Max,
   MaxLength,
+  Max,
   Min,
 } from 'class-validator';
 
 export class CreateReviewDto {
 
-  @IsInt({
-    message: 'Student ID must be an integer',
-  })
+  @IsNumber(
+    {},
+    {
+      message: 'Student ID must be a number',
+    },
+  )
   @IsNotEmpty({
     message: 'Student ID is required',
   })
   studentId!: number;
 
-  @IsInt({
-    message: 'Tutor ID must be an integer',
-  })
+
+  @IsNumber(
+    {},
+    {
+      message: 'Tutor ID must be a number',
+    },
+  )
   @IsNotEmpty({
     message: 'Tutor ID is required',
   })
   tutorId!: number;
 
-  @IsInt({
-    message: 'Rating must be an integer',
+
+  @IsNumber(
+    {},
+    {
+      message: 'Rating must be a number',
+    },
+  )
+  @IsNotEmpty({
+    message: 'Rating is required',
   })
   @Min(1, {
-    message: 'Rating must be at least 1',
+    message: 'Rating minimum is 1',
   })
   @Max(5, {
-    message: 'Rating must not exceed 5',
+    message: 'Rating maximum is 5',
   })
   rating!: number;
+
 
   @IsString({
     message: 'Comment must be a string',
@@ -42,8 +57,8 @@ export class CreateReviewDto {
   @IsNotEmpty({
     message: 'Comment is required',
   })
-  @MaxLength(500, {
-    message: 'Comment must not exceed 500 characters',
+  @MaxLength(255, {
+    message: 'Comment must not exceed 255 characters',
   })
   comment!: string;
 

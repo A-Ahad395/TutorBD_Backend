@@ -3,20 +3,26 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 
+import { Student } from './student.entity';
+import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
+import { UpdateStudentStatusDto } from './dto/update-student-status.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReplaceReviewDto } from './dto/replace-review.dto';
 
-interface Tutor {
+export interface Tutor {
   id: number;
   name: string;
   subject: string;
   price: number;
 }
 
-interface Booking {
+export interface Booking {
   id: number;
   studentId: number;
   tutorId: number;
@@ -26,7 +32,7 @@ interface Booking {
   status: string;
 }
 
-interface Session {
+export interface Session {
   id: number;
   studentId: number;
   tutorId: number;
@@ -36,7 +42,7 @@ interface Session {
   status: string;
 }
 
-interface Review {
+export interface Review {
   id: number;
   studentId: number;
   tutorId: number;
@@ -91,31 +97,129 @@ export class StudentService {
       timeSlot: '10:00 AM',
       status: 'completed',
     },
-    {
-      id: 2,
-      studentId: 1,
-      tutorId: 1,
-      subject: 'Mathematics',
-      date: '2026-06-22',
-      timeSlot: '04:00 PM',
-      status: 'completed',
-    },
-    {
-      id: 3,
-      studentId: 2,
-      tutorId: 3,
-      subject: 'Physics',
-      date: '2026-06-23',
-      timeSlot: '06:00 PM',
-      status: 'completed',
-    },
   ];
 
   private readonly reviews: Review[] = [];
 
-  // Route 1 service:
-  // Search tutors using subject and maximum price
-  searchTutors(subject?: string, maxPrice?: number) {
+  constructor(
+    @InjectRepository(Student)
+    private studentRepository: Repository<Student>,
+  ) {}
+
+  async createStudent(
+    dto: CreateStudentDto,
+  ): Promise<Student> {
+    const existingStudent =
+      await this.studentRepository.findOneBy({
+        email: dto.email,
+      });
+
+    if (existingStudent) {
+      throw new BadRequestException(
+        'Student with this email already exists',
+      );
+    }
+
+    return this.studentRepository.save(dto);
+  }
+
+  async getStudents(): Promise<Student[]> {
+    return this.studentRepository.find();
+  }
+
+  async getStudentById(
+    id: number,
+  ): Promise<Student> {
+    const student =
+      await this.studentRepository.findOneBy({
+        id: id,
+      });
+
+    if (!student) {
+      throw new NotFoundException(
+        `Student with ID ${id} not found`,
+      );
+    }
+
+    return student;
+  }
+
+  async updateStudent(
+    id: number,
+    dto: UpdateStudentDto,
+  ): Promise<Student> {
+    const student =
+      await this.studentRepository.findOneBy({
+        id: id,
+      });
+
+    if (!student) {
+      throw new NotFoundException(
+        `Student with ID ${id} not found`,
+      );
+    }
+
+    if (
+      dto.email !== undefined &&
+      dto.email !== student.email
+    ) {
+      const existingStudent =
+        await this.studentRepository.findOneBy({
+          email: dto.email,
+        });
+
+      if (existingStudent) {
+        throw new BadRequestException(
+          'Student with this email already exists',
+        );
+      }
+    }
+
+    await this.studentRepository.update(
+      id,
+      dto,
+    );
+
+    const updatedStudent =
+      await this.studentRepository.findOneBy({
+        id: id,
+      });
+
+    return updatedStudent!;
+  }
+
+  async updateStudentStatus(
+    id: number,
+    dto: UpdateStudentStatusDto,
+  ): Promise<Student> {
+    const student =
+      await this.studentRepository.findOneBy({
+        id: id,
+      });
+
+    if (!student) {
+      throw new NotFoundException(
+        `Student with ID ${id} not found`,
+      );
+    }
+
+    await this.studentRepository.update(
+      id,
+      dto,
+    );
+
+    const updatedStudent =
+      await this.studentRepository.findOneBy({
+        id: id,
+      });
+
+    return updatedStudent!;
+  }
+
+  searchTutors(
+    subject?: string,
+    maxPrice?: number,
+  ) {
     if (
       maxPrice !== undefined &&
       (Number.isNaN(maxPrice) || maxPrice < 0)
@@ -125,18 +229,20 @@ export class StudentService {
       );
     }
 
-    const filteredTutors = this.tutors.filter((tutor) => {
-      const subjectMatched =
-        !subject ||
-        tutor.subject
-          .toLowerCase()
-          .includes(subject.trim().toLowerCase());
+    const filteredTutors =
+      this.tutors.filter((tutor) => {
+        const subjectMatched =
+          !subject ||
+          tutor.subject
+            .toLowerCase()
+            .includes(subject.trim().toLowerCase());
 
-      const priceMatched =
-        maxPrice === undefined || tutor.price <= maxPrice;
+        const priceMatched =
+          maxPrice === undefined ||
+          tutor.price <= maxPrice;
 
-      return subjectMatched && priceMatched;
-    });
+        return subjectMatched && priceMatched;
+      });
 
     return {
       message: 'Tutors retrieved successfully',
@@ -145,10 +251,13 @@ export class StudentService {
     };
   }
 
-  // Route 2 service:
-  // Find a single tutor using tutor ID
-  findTutor(id: number) {
-    const tutor = this.tutors.find((item) => item.id === id);
+  findTutor(
+    id: number,
+  ) {
+    const tutor =
+      this.tutors.find(
+        (item) => item.id === id,
+      );
 
     if (!tutor) {
       throw new NotFoundException(
@@ -162,26 +271,27 @@ export class StudentService {
     };
   }
 
-  // Route 3 service:
-  // Create a new booking request
-  createBooking(createBookingDto: CreateBookingDto) {
-    const tutor = this.tutors.find(
-      (item) => item.id === createBookingDto.tutorId,
-    );
+  createBooking(
+    dto: CreateBookingDto,
+  ) {
+    const tutor =
+      this.tutors.find(
+        (item) => item.id === dto.tutorId,
+      );
 
     if (!tutor) {
       throw new NotFoundException(
-        `Tutor with ID ${createBookingDto.tutorId} was not found`,
+        `Tutor with ID ${dto.tutorId} was not found`,
       );
     }
 
     const newBooking: Booking = {
       id: this.bookings.length + 1,
-      studentId: createBookingDto.studentId,
-      tutorId: createBookingDto.tutorId,
-      subject: createBookingDto.subject,
-      date: createBookingDto.date,
-      timeSlot: createBookingDto.timeSlot,
+      studentId: dto.studentId,
+      tutorId: dto.tutorId,
+      subject: dto.subject,
+      date: dto.date,
+      timeSlot: dto.timeSlot,
       status: 'pending',
     };
 
@@ -193,15 +303,14 @@ export class StudentService {
     };
   }
 
-  // Route 4 service:
-  // Update some fields of an existing booking
   updateBooking(
     id: number,
-    updateBookingDto: UpdateBookingDto,
+    dto: UpdateBookingDto,
   ) {
-    const booking = this.bookings.find(
-      (item) => item.id === id,
-    );
+    const booking =
+      this.bookings.find(
+        (item) => item.id === id,
+      );
 
     if (!booking) {
       throw new NotFoundException(
@@ -209,20 +318,20 @@ export class StudentService {
       );
     }
 
-    if (updateBookingDto.subject !== undefined) {
-      booking.subject = updateBookingDto.subject;
+    if (dto.subject !== undefined) {
+      booking.subject = dto.subject;
     }
 
-    if (updateBookingDto.date !== undefined) {
-      booking.date = updateBookingDto.date;
+    if (dto.date !== undefined) {
+      booking.date = dto.date;
     }
 
-    if (updateBookingDto.timeSlot !== undefined) {
-      booking.timeSlot = updateBookingDto.timeSlot;
+    if (dto.timeSlot !== undefined) {
+      booking.timeSlot = dto.timeSlot;
     }
 
-    if (updateBookingDto.status !== undefined) {
-      booking.status = updateBookingDto.status;
+    if (dto.status !== undefined) {
+      booking.status = dto.status;
     }
 
     return {
@@ -231,23 +340,25 @@ export class StudentService {
     };
   }
 
-  // Route 5 service:
-  // Cancel or delete a booking request
-  cancelBooking(id: number) {
-    const bookingIndex = this.bookings.findIndex(
-      (item) => item.id === id,
-    );
+  cancelBooking(
+    id: number,
+  ) {
+    const index =
+      this.bookings.findIndex(
+        (item) => item.id === id,
+      );
 
-    if (bookingIndex === -1) {
+    if (index === -1) {
       throw new NotFoundException(
         `Booking with ID ${id} was not found`,
       );
     }
 
-    const cancelledBooking = this.bookings.splice(
-      bookingIndex,
-      1,
-    )[0];
+    const cancelledBooking =
+      this.bookings.splice(
+        index,
+        1,
+      )[0];
 
     return {
       message: 'Booking cancelled successfully',
@@ -255,9 +366,9 @@ export class StudentService {
     };
   }
 
-  // Route 6 service:
-  // View all session histories or filter by student ID
-  getSessionHistory(studentId?: number) {
+  getSessionHistory(
+    studentId?: number,
+  ) {
     if (
       studentId !== undefined &&
       Number.isNaN(studentId)
@@ -267,106 +378,130 @@ export class StudentService {
       );
     }
 
-    const sessionHistory =
+    const history =
       studentId === undefined
         ? this.sessions
         : this.sessions.filter(
-            (session) => session.studentId === studentId,
+            (session) =>
+              session.studentId === studentId,
           );
 
     return {
       message: 'Session history retrieved successfully',
-      totalSessions: sessionHistory.length,
-      data: sessionHistory,
+      totalSessions: history.length,
+      data: history,
     };
   }
 
-  // Route 7 service:
-  // Submit a new rating and review
-  createReview(createReviewDto: CreateReviewDto) {
-    const tutor = this.tutors.find(
-      (item) => item.id === createReviewDto.tutorId,
-    );
+  createReview(
+    dto: CreateReviewDto,
+  ) {
+    const tutor =
+      this.tutors.find(
+        (item) => item.id === dto.tutorId,
+      );
 
     if (!tutor) {
       throw new NotFoundException(
-        `Tutor with ID ${createReviewDto.tutorId} was not found`,
+        `Tutor with ID ${dto.tutorId} was not found`,
       );
     }
 
     if (
-      createReviewDto.rating < 1 ||
-      createReviewDto.rating > 5
+      dto.rating < 1 ||
+      dto.rating > 5
     ) {
       throw new BadRequestException(
         'Rating must be between 1 and 5',
       );
     }
 
-    const newReview: Review = {
+    const review: Review = {
       id: this.reviews.length + 1,
-      studentId: createReviewDto.studentId,
-      tutorId: createReviewDto.tutorId,
-      rating: createReviewDto.rating,
-      comment: createReviewDto.comment,
+      studentId: dto.studentId,
+      tutorId: dto.tutorId,
+      rating: dto.rating,
+      comment: dto.comment,
     };
 
-    this.reviews.push(newReview);
+    this.reviews.push(review);
 
     return {
       message: 'Review submitted successfully',
-      data: newReview,
+      data: review,
     };
   }
 
-  // Route 8 service:
-  // Completely replace an existing review
   replaceReview(
     id: number,
-    replaceReviewDto: ReplaceReviewDto,
+    dto: ReplaceReviewDto,
   ) {
-    const reviewIndex = this.reviews.findIndex(
-      (item) => item.id === id,
-    );
+    const index =
+      this.reviews.findIndex(
+        (item) => item.id === id,
+      );
 
-    if (reviewIndex === -1) {
+    if (index === -1) {
       throw new NotFoundException(
         `Review with ID ${id} was not found`,
       );
     }
 
-    const tutor = this.tutors.find(
-      (item) => item.id === replaceReviewDto.tutorId,
-    );
-
-    if (!tutor) {
-      throw new NotFoundException(
-        `Tutor with ID ${replaceReviewDto.tutorId} was not found`,
-      );
-    }
-
     if (
-      replaceReviewDto.rating < 1 ||
-      replaceReviewDto.rating > 5
+      dto.rating < 1 ||
+      dto.rating > 5
     ) {
       throw new BadRequestException(
         'Rating must be between 1 and 5',
       );
     }
 
-    const replacedReview: Review = {
-      id,
-      studentId: replaceReviewDto.studentId,
-      tutorId: replaceReviewDto.tutorId,
-      rating: replaceReviewDto.rating,
-      comment: replaceReviewDto.comment,
+    const tutor =
+      this.tutors.find(
+        (item) => item.id === dto.tutorId,
+      );
+
+    if (!tutor) {
+      throw new NotFoundException(
+        `Tutor with ID ${dto.tutorId} was not found`,
+      );
+    }
+
+    const review: Review = {
+      id: id,
+      studentId: dto.studentId,
+      tutorId: dto.tutorId,
+      rating: dto.rating,
+      comment: dto.comment,
     };
 
-    this.reviews[reviewIndex] = replacedReview;
+    this.reviews[index] = review;
 
     return {
-      message: 'Review replaced successfully',
-      data: replacedReview,
+      message: 'Review updated successfully',
+      data: review,
+    };
+  }
+
+  async deleteStudent(
+    id: number,
+  ) {
+    const student =
+      await this.studentRepository.findOneBy({
+        id: id,
+      });
+
+    if (!student) {
+      throw new NotFoundException(
+        `Student with ID ${id} not found`,
+      );
+    }
+
+    await this.studentRepository.delete(id);
+
+    return {
+      message: 'Student deleted successfully',
+      deletedStudentId: id,
     };
   }
 }

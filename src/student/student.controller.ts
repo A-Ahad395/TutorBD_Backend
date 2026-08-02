@@ -9,9 +9,15 @@ import {
   Post,
   Put,
   Query,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
 
 import { StudentService } from './student.service';
+
+import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
+import { UpdateStudentStatusDto } from './dto/update-student-status.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -19,16 +25,19 @@ import { ReplaceReviewDto } from './dto/replace-review.dto';
 
 @Controller('student')
 export class StudentController {
-  constructor(private readonly studentService: StudentService) {}
+  constructor(
+    private readonly studentService: StudentService,
+  ) {}
 
-  // Route 1: Search tutors by subject and maximum price
   @Get('tutors/search')
   searchTutors(
     @Query('subject') subject?: string,
     @Query('maxPrice') maxPrice?: string,
-  ): ReturnType<StudentService['searchTutors']> {
+  ) {
     const numericMaxPrice =
-      maxPrice !== undefined ? Number(maxPrice) : undefined;
+      maxPrice !== undefined
+        ? Number(maxPrice)
+        : undefined;
 
     return this.studentService.searchTutors(
       subject,
@@ -36,72 +45,122 @@ export class StudentController {
     );
   }
 
-  // Route 2: Get one tutor by ID
   @Get('tutors/:id')
   findTutor(
     @Param('id', ParseIntPipe) id: number,
-  ): ReturnType<StudentService['findTutor']> {
+  ) {
     return this.studentService.findTutor(id);
   }
 
-  // Route 3: Send a booking request
   @Post('bookings')
+  @UsePipes(new ValidationPipe())
   createBooking(
-    @Body() createBookingDto: CreateBookingDto,
-  ): ReturnType<StudentService['createBooking']> {
-    return this.studentService.createBooking(createBookingDto);
+    @Body() dto: CreateBookingDto,
+  ) {
+    return this.studentService.createBooking(dto);
   }
 
-  // Route 4: Partially update a booking request
   @Patch('bookings/:id')
+  @UsePipes(new ValidationPipe())
   updateBooking(
     @Param('id', ParseIntPipe) id: number,
-    @Body() updateBookingDto: UpdateBookingDto,
-  ): ReturnType<StudentService['updateBooking']> {
+    @Body() dto: UpdateBookingDto,
+  ) {
     return this.studentService.updateBooking(
       id,
-      updateBookingDto,
+      dto,
     );
   }
 
-  // Route 5: Cancel a booking request
   @Delete('bookings/:id')
   cancelBooking(
     @Param('id', ParseIntPipe) id: number,
-  ): ReturnType<StudentService['cancelBooking']> {
+  ) {
     return this.studentService.cancelBooking(id);
   }
 
-  // Route 6: View student session history
   @Get('sessions/history')
   getSessionHistory(
     @Query('studentId') studentId?: string,
-  ): ReturnType<StudentService['getSessionHistory']> {
+  ) {
     const numericStudentId =
-      studentId !== undefined ? Number(studentId) : undefined;
+      studentId !== undefined
+        ? Number(studentId)
+        : undefined;
 
     return this.studentService.getSessionHistory(
       numericStudentId,
     );
   }
 
-  // Route 7: Submit rating and review
   @Post('reviews')
+  @UsePipes(new ValidationPipe())
   createReview(
-    @Body() createReviewDto: CreateReviewDto,
-  ): ReturnType<StudentService['createReview']> {
-    return this.studentService.createReview(createReviewDto);
+    @Body() dto: CreateReviewDto,
+  ) {
+    return this.studentService.createReview(dto);
   }
 
-  // Route 8: Fully replace an existing review
   @Put('reviews/:id')
+  @UsePipes(new ValidationPipe())
   replaceReview(
     @Param('id', ParseIntPipe) id: number,
-    @Body() replaceReviewDto: ReplaceReviewDto,
-  ): ReturnType<StudentService['replaceReview']> {
+    @Body() dto: ReplaceReviewDto,
+  ) {
     return this.studentService.replaceReview(
       id,
-      replaceReviewDto,
+      dto,
     );
+  }
+
+  @Post()
+  @UsePipes(new ValidationPipe())
+  createStudent(
+    @Body() dto: CreateStudentDto,
+  ) {
+    return this.studentService.createStudent(dto);
+  }
+
+  @Get()
+  getStudents() {
+    return this.studentService.getStudents();
+  }
+
+  @Get(':id')
+  getStudentById(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.studentService.getStudentById(id);
+  }
+
+  @Put(':id')
+  @UsePipes(new ValidationPipe())
+  updateStudent(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateStudentDto,
+  ) {
+    return this.studentService.updateStudent(
+      id,
+      dto,
+    );
+  }
+
+  @Patch(':id/status')
+  @UsePipes(new ValidationPipe())
+  updateStudentStatus(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateStudentStatusDto,
+  ) {
+    return this.studentService.updateStudentStatus(
+      id,
+      dto,
+    );
+  }
+
+  @Delete(':id')
+  deleteStudent(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+    return this.studentService.deleteStudent(id);
   }
 }
