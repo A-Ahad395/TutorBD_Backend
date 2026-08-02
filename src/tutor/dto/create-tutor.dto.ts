@@ -1,9 +1,4 @@
-import {
-  IsOptional,
-  IsString,
-  IsNotEmpty,
-  IsNumberString,
-} from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, IsOptional } from 'class-validator';
 
 export class CreateTutorDto {
   @IsOptional()
@@ -11,12 +6,10 @@ export class CreateTutorDto {
   fullName?: string;
 
   @IsNotEmpty()
-  @IsNumberString({}, { message: 'Phone must contain only numeric digits.' })
-  phone!: string;
-}
+  @IsString()
+  phone?: string;
 
-export class UpdatePhoneDto {
   @IsNotEmpty()
-  @IsNumberString({}, { message: 'Phone must contain only numeric digits.' })
-  phone!: string;
+  @MinLength(6, { message: 'Password must be at least 6 characters long' })
+  password?: string;
 }

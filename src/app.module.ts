@@ -18,6 +18,7 @@ import { Tutor } from './tutor/entities/tutor.entity';
         url: process.env.DATABASE_URL,
         entities: [Tutor],
         synchronize: true,
+        autoLoadEntities: true,
       }),
     }),
 

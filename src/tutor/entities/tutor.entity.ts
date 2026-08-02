@@ -1,4 +1,11 @@
-import { Entity, PrimaryColumn, Column, BeforeInsert } from 'typeorm';
+import {
+  Entity,
+  PrimaryColumn,
+  Column,
+  BeforeInsert,
+  OneToMany,
+} from 'typeorm';
+import { Qualification } from './qualification.entity';
 
 @Entity('tutors')
 export class Tutor {
@@ -13,6 +20,12 @@ export class Tutor {
 
   @Column({ type: 'bigint', unsigned: true })
   phone!: string;
+
+  @Column()
+  password!: string;
+
+  @OneToMany(() => Qualification, (qualification) => qualification.tutor)
+  qualifications?: Qualification[];
 
   @BeforeInsert()
   generateId() {
