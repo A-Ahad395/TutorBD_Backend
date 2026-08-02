@@ -4,75 +4,60 @@ import {
   Post,
   Body,
   Patch,
-  Put,
   Param,
   Delete,
-  Query,
-  UseInterceptors,
-  ParseFilePipe,
-  UploadedFile,
-  MaxFileSizeValidator,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
 import { TutorService } from './tutor.service';
 import { CreateTutorDto } from './dto/create-tutor.dto';
-import { UpdateTutorDto } from './dto/update-tutor.dto';
+import { CreateQualificationDto } from './dto/create-qualification.dto';
 
+@UsePipes(new ValidationPipe())
 @Controller('tutor')
 export class TutorController {
   constructor(private readonly tutorService: TutorService) {}
 
   @Post()
-  @UseInterceptors(FileInterceptor('nidImage'))
-  create(
-    @UploadedFile(
-      new ParseFilePipe({
-        validators: [
-          new MaxFileSizeValidator({
-            maxSize: 2 * 1024 * 1024,
-          }),
-        ],
-      }),
-    )
-    file: Buffer,
-
-    @Body() createTutorDto: CreateTutorDto,
-  ) {
-    return this.tutorService.create(createTutorDto, file);
+  create(@Body() createTutorDto: CreateTutorDto) {
+    return this.tutorService.create(createTutorDto);
   }
 
   @Get()
-  findAll(@Query('subject') subject?: string) {
-    return this.tutorService.findAll(subject);
+  findAll() {
+    return this.tutorService.findAll();
   }
 
   @Get(':id')
   findOne(@Param('id') id: string) {
-    return this.tutorService.findOne(+id);
+    return this.tutorService.findOne(id);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateTutorDto: UpdateTutorDto) {
-    return this.tutorService.update(+id, updateTutorDto);
-  }
-
-  @Put(':id')
-  replace(@Param('id') id: string, @Body() createTutorDto: CreateTutorDto) {
-    return this.tutorService.replace(+id, createTutorDto);
+  @Patch(':id/phone')
+  updatePhone(@Param('id') id: string, @Body('phone') phone: string) {
+    return this.tutorService.updatePhone(id, phone);
   }
 
   @Delete(':id')
   remove(@Param('id') id: string) {
-    return this.tutorService.remove(+id);
+    return this.tutorService.remove(id);
   }
 
-  @Post(':id/schedule')
-  addSchedule(@Param('id') id: string, @Body('timeSlot') timeSlot: string) {
-    return this.tutorService.addSchedule(+id, timeSlot);
+  @Post(':id/qualifications')
+  addQualification(
+    @Param('id') id: string,
+    @Body() createQualDto: CreateQualificationDto,
+  ) {
+    return this.tutorService.addQualification(id, createQualDto);
   }
 
-  @Get(':id/schedule')
-  getSchedule(@Param('id') id: string, @Query('date') date: string) {
-    return this.tutorService.getSchedule(+id, date);
+  @Get(':id/qualifications')
+  getQualifications(@Param('id') id: string) {
+    return this.tutorService.getQualifications(id);
+  }
+
+  @Delete('qualifications/:qualId')
+  removeQualification(@Param('qualId') qualId: number) {
+    return this.tutorService.removeQualification(qualId);
   }
 }

@@ -16,7 +16,6 @@ import { ReviewModule } from './review/review.module';
 
 @Module({
   imports: [
-
     ConfigModule.forRoot({
       isGlobal: true,
     }),
@@ -40,7 +39,6 @@ import { ReviewModule } from './review/review.module';
     TuitionModule,
     BookingModule,
     ReviewModule,
-
   ],
 
   controllers: [

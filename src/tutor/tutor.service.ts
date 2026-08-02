@@ -1,50 +1,100 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+import { Tutor } from './entities/tutor.entity';
+import { Qualification } from './entities/qualification.entity';
 import { CreateTutorDto } from './dto/create-tutor.dto';
-import { UpdateTutorDto } from './dto/update-tutor.dto';
+import { CreateQualificationDto } from './dto/create-qualification.dto';
 
 @Injectable()
 export class TutorService {
-  create(createTutorDto: CreateTutorDto, file: Buffer) {
-    return {
-      tutor: createTutorDto,
-      file: file,
-    };
-  }
+  constructor(
+    @InjectRepository(Tutor)
+    private readonly tutorRepository: Repository<Tutor>,
+    @InjectRepository(Qualification)
+    private readonly qualificationRepository: Repository<Qualification>,
+  ) {}
 
-  findAll(subject?: string) {
-    if (subject) {
-      return `Found all tutors teaching ${subject}`;
+  async create(createTutorDto: CreateTutorDto) {
+    try {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(createTutorDto.password, salt);
+
+      const newTutor = this.tutorRepository.create({
+        ...createTutorDto,
+        password: hashedPassword,
+      });
+
+      return await this.tutorRepository.save(newTutor);
+    } catch (error) {
+      throw new HttpException(
+        'Failed to create tutor',
+        HttpStatus.INTERNAL_SERVER_ERROR,
+      );
     }
-    return `Found all tutors`;
   }
 
-  findOne(id: number) {
-    return `Found tutor with ID: ${id}`;
+  async findAll() {
+    return await this.tutorRepository.find({
+      relations: { qualifications: true },
+    });
   }
 
-  update(id: number, updateTutorDto: UpdateTutorDto) {
-    return {
-      id,
-      updatedData: updateTutorDto,
-    };
+  async findOne(id: string) {
+    const tutor = await this.tutorRepository.findOne({
+      where: { id },
+      relations: { qualifications: true },
+    });
+
+    if (!tutor) {
+      throw new NotFoundException(`Tutor with ID ${id} not found.`);
+    }
+    return tutor;
   }
 
-  remove(id: number) {
-    return `Deleted tutor with ID: ${id}`;
+  async updatePhone(id: string, phone: string) {
+    const tutor = await this.findOne(id);
+    tutor.phone = phone;
+    return await this.tutorRepository.save(tutor);
   }
 
-  replace(id: number, createTutorDto: CreateTutorDto) {
-    return {
-      id,
-      tutor: createTutorDto,
-    };
+  async remove(id: string) {
+    const result = await this.tutorRepository.delete(id);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Tutor with ID ${id} not found.`);
+    }
+    return { message: `Tutor with ID ${id} successfully removed.` };
   }
 
-  addSchedule(id: number, timeSlot: string) {
-    return `Found tutor with ID: ${id} and added schedule for slot: ${timeSlot}`;
+  async addQualification(
+    tutorId: string,
+    createQualDto: CreateQualificationDto,
+  ) {
+    const tutor = await this.findOne(tutorId);
+    const newQual = this.qualificationRepository.create({
+      ...createQualDto,
+      tutor: tutor,
+    });
+    return await this.qualificationRepository.save(newQual);
   }
 
-  getSchedule(id: number, date: string) {
-    return `Found tutor with ID: ${id} and retrieved schedule for date: ${date}`;
+  async getQualifications(tutorId: string) {
+    return await this.qualificationRepository.find({
+      where: { tutor: { id: tutorId } },
+    });
+  }
+
+  async removeQualification(qualId: number) {
+    const result = await this.qualificationRepository.delete(qualId);
+    if (result.affected === 0) {
+      throw new NotFoundException(`Qualification with ID ${qualId} not found.`);
+    }
+    return { message: `Qualification successfully deleted.` };
   }
 }
