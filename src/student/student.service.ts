@@ -4,6 +4,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+<<<<<<< Updated upstream
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
@@ -43,6 +44,12 @@ interface Review {
   rating: number;
   comment: string;
 }
+=======
+import { Student } from './student.entity';
+import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
+import { UpdateStudentStatusDto } from './dto/update-student-status.dto';
+>>>>>>> Stashed changes
 
 @Injectable()
 export class StudentService {
@@ -369,4 +376,33 @@ export class StudentService {
       data: replacedReview,
     };
   }
+  
+  async updateStudentStatus(
+  id: number,
+  dto: UpdateStudentStatusDto,
+): Promise<Student> {
+
+  const student =
+    await this.studentRepository.findOneBy({
+      id: id,
+    });
+
+  if (!student) {
+    throw new NotFoundException(
+      `Student with ID ${id} not found`,
+    );
+  }
+
+  await this.studentRepository.update(
+    id,
+    dto,
+  );
+
+  const updatedStudent =
+    await this.studentRepository.findOneBy({
+      id: id,
+    });
+
+  return updatedStudent!;
+}
 }

@@ -12,10 +12,16 @@ import {
 } from '@nestjs/common';
 
 import { StudentService } from './student.service';
+<<<<<<< Updated upstream
 import { CreateBookingDto } from './dto/create-booking.dto';
 import { UpdateBookingDto } from './dto/update-booking.dto';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { ReplaceReviewDto } from './dto/replace-review.dto';
+=======
+import { CreateStudentDto } from './dto/create-student.dto';
+import { UpdateStudentDto } from './dto/update-student.dto';
+import { UpdateStudentStatusDto } from './dto/update-student-status.dto';
+>>>>>>> Stashed changes
 
 @Controller('student')
 export class StudentController {
@@ -36,9 +42,27 @@ export class StudentController {
     );
   }
 
+<<<<<<< Updated upstream
   // Route 2: Get one tutor by ID
   @Get('tutors/:id')
   findTutor(
+=======
+@Patch(':id/status')
+@UsePipes(new ValidationPipe())
+updateStudentStatus(
+  @Param('id', ParseIntPipe) id: number,
+  @Body() dto: UpdateStudentStatusDto,
+) {
+  return this.studentService.updateStudentStatus(
+    id,
+    dto,
+  );
+}
+
+
+  @Delete(':id')
+  deleteStudent(
+>>>>>>> Stashed changes
     @Param('id', ParseIntPipe) id: number,
   ): ReturnType<StudentService['findTutor']> {
     return this.studentService.findTutor(id);
