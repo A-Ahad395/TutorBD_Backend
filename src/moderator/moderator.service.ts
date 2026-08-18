@@ -1,184 +1,101 @@
-import { Injectable } from '@nestjs/common';
-import { CreateReportDto } from './dto/create-report.dto';
-import { UpdateReportDto } from './dto/update-report.dto';
-import { ModeratorUserDto } from './dto/moderator-user.dto';
+import {
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 
- 
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import * as bcrypt from 'bcrypt';
+
+import { Moderator } from './entities/moderator.entity';
+
+import { CreateModeratorDto } from './dto/create-moderator.dto';
+import { UpdateModeratorDto } from './dto/update-moderator.dto';
+import { UpdateModeratorStatusDto } from './dto/update-moderator-status.dto';
+
 @Injectable()
 export class ModeratorService {
-  private reports = [
-    {
-      id: 1,
-      title: 'Fake Tutor',
-      description: 'Using fake certificate',
-      status: 'Pending',
-    },
-    {
-      id: 2,
-      title: 'Late Class Issue',
-      status: 'Approved',
-    },
-    {
-      id: 3,
-      title: 'Payment Issue',
-      status: 'Student reported payment problem',
-    },
+  constructor(
+    @InjectRepository(Moderator)
+    private readonly moderatorRepository: Repository<Moderator>,
+  ) {}
 
-  ];
+  // Create Moderator
+  async create(createModeratorDto: CreateModeratorDto) {
+    const existingModerator = await this.moderatorRepository.findOne({
+      where: {
+        email: createModeratorDto.email,
+      },
+    });
 
-  private users: ModeratorUserDto[] = [];
+    if (existingModerator) {
+      throw new ConflictException('Moderator already exists');
+    }
 
-  register(user: ModeratorUserDto) {
-    this.users.push(user);
-    return {
-      message: 'Moderator registered successfully',
-      data: user,
-    };
-  }
- 
-  create(createReportDto: CreateReportDto) {
-    const report = {
-      id: this.reports.length + 1,
-      ...createReportDto,
-      status: 'Pending',
-    };
- 
-    this.reports.push(report);
- 
-    return {
-      message: 'Report created successfully',
-      data: report,
-    };
-  }
- 
-  findAll(status?: string) {
-    if (status) {
-      return this.reports.filter(
-        (report) =>
-          report.status.toLowerCase() === status.toLowerCase(),
-      );
-    }
- 
-    return this.reports;
-  }
- 
-  findOne(id: number) {
-    return (
-      this.reports.find((report) => report.id === id) ||
-      `Report with ID ${id} not found`
+    const hashedPassword = await bcrypt.hash(
+      createModeratorDto.password,
+      10,
     );
-  }
- 
-  update(id: number, updateReportDto: UpdateReportDto) {
-    const report = this.reports.find(
-      (report) => report.id === id,
-    );
- 
-    if (!report) {
-      return `Report with ID ${id} not found`;
-    }
- 
-    Object.assign(report, updateReportDto);
- 
-    return {
-      message: 'Report updated successfully',
-      data: report,
-    };
-  }
- 
-  replace(id: number, createReportDto: CreateReportDto) {
-    const index = this.reports.findIndex(
-      (report) => report.id === id,
-    );
- 
-    if (index === -1) {
-      return `Report with ID ${id} not found`;
-    }
- 
-    this.reports[index] = {
-      id,
-      ...createReportDto,
-      status: 'Pending',
-    };
- 
-    return {
-      message: 'Report replaced successfully',
-      data: this.reports[index],
-    };
-  }
- 
-  remove(id: number) {
-    const index = this.reports.findIndex(
-      (report) => report.id === id,
-    );
- 
-    if (index === -1) {
-      return `Report with ID ${id} not found`;
-    }
- 
-    const deleted = this.reports.splice(index, 1);
- 
-    return {
-      message: 'Report deleted successfully',
-      data: deleted[0],
-    };
-  }
- 
-  approve(id: number) {
-    const report = this.reports.find(
-      (report) => report.id === id,
-    );
- 
-    if (!report) {
-      return `Report with ID ${id} not found`;
-    }
- 
-    report.status = 'Approved';
- 
-    return {
-      message: 'Report approved',
-      data: report,
-    };
-  }
- 
-  reject(id: number, reason: string) {
-    const report = this.reports.find(
-      (report) => report.id === id,
-    );
- 
-    if (!report) {
-      return `Report with ID ${id} not found`;
-    }
- 
-    report.status = 'Rejected';
- 
-    return {
-      message: 'Report rejected',
-      reason,
-      data: report,
-    };
-  }
- 
-  resolve(id: number) {
-    const report = this.reports.find(
-      (report) => report.id === id,
-    );
- 
-    if (!report) {
-      return `Report with ID ${id} not found`;
-    }
- 
-    report.status = 'Resolved';
- 
-    return {
-      message: 'Complaint resolved',
-      data: report,
-    };
+
+    const moderator = this.moderatorRepository.create({
+      ...createModeratorDto,
+      password: hashedPassword,
+    });
+
+    return await this.moderatorRepository.save(moderator);
   }
 
-  
-  findAllUsers() {
-    return this.users;
+  // Get All Moderators
+  async findAll() {
+    return await this.moderatorRepository.find();
   }
 
+  // Get Moderator By ID
+  async findOne(id: number) {
+    const moderator = await this.moderatorRepository.findOne({
+      where: { id },
+    });
+
+    if (!moderator) {
+      throw new NotFoundException('Moderator not found');
+    }
+
+    return moderator;
+  }
+
+  // Update Moderator
+  async update(
+    id: number,
+    updateModeratorDto: UpdateModeratorDto,
+  ) {
+    const moderator = await this.findOne(id);
+
+    Object.assign(moderator, updateModeratorDto);
+
+    return await this.moderatorRepository.save(moderator);
+  }
+
+  // Update Status
+  async updateStatus(
+    id: number,
+    dto: UpdateModeratorStatusDto,
+  ) {
+    const moderator = await this.findOne(id);
+
+    moderator.isActive = dto.isActive;
+
+    return await this.moderatorRepository.save(moderator);
+  }
+
+  // Delete Moderator
+  async remove(id: number) {
+    const moderator = await this.findOne(id);
+
+    await this.moderatorRepository.remove(moderator);
+
+    return {
+      message: 'Moderator deleted successfully',
+    };
+  }
 }
